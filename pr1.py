@@ -1,0 +1,99 @@
+import numpy as np
+import tensorflow as tf
+
+# open file for reading training data
+try:
+	file = open("/home/ashwin/m", 'r')
+except:
+	print "Error opening file for reading."
+num_train = 8124
+num_attr = 21
+
+def weight_variable(shape):
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
+
+def bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+
+# initialize training attributes and classes
+train_data = np.empty([num_train, num_attr])
+train_classes = np.empty(num_train)
+
+# iteration variable
+i = 0
+for x in file:
+	attrs = x.split(" ")
+
+	# fill up the training example labels
+	train_classes[i] = attrs[0]
+
+	# strip trailing new lines
+	attrs = attrs[1:-1]
+	attrs_new = []
+
+	# strip trailing ":1"
+	for attr in attrs:
+		attr = attr[:-2]
+		attrs_new.append(attr)
+
+	# add data to new list
+	attrs_new = np.asarray(attrs_new)
+
+	# fill up the training example attributes
+	train_data[i] = attrs_new
+	i += 1
+
+# normalize the attribute values
+mins = np.empty(21)
+mins = np.amin(train_data, axis=0)
+train_data -= mins
+train_classes -= 1	
+
+# print train_data
+np.reshape(train_classes,(8124,1))
+
+# print isinstance(train_data, np.ndarray)
+
+no_data_samples = 8124
+no_of_batches = 10
+no_of_features = 21
+no_of_labels = 2
+
+#network initialisations
+no_of_inputs = 21
+no_weights_first_layer  = 42
+no_bias_first_layer  = 42
+no_of_outputs = 1
+no_of_epochs = 1000
+learning_rate = 0.00003
+
+x = tf.placeholder(tf.float32, [None,no_of_inputs])
+
+W_1 = weight_variable([no_of_inputs,no_weights_first_layer])
+b_1 = bias_variable([no_bias_first_layer])
+y_1 = tf.nn.sigmoid(tf.matmul(x, W_1) + b_1)
+
+W_2 = weight_variable([no_weights_first_layer,no_of_outputs])
+b_2 =  bias_variable([no_of_outputs])
+y = tf.nn.sigmoid(tf.matmul(y_1,W_2) + b_2)
+
+y_ = tf.placeholder(tf.float32, [8124])
+
+mean_square_error = -tf.reduce_mean(y_*tf.log(y)+(1-y_)*tf.log(1-y))
+# Optimiser to minimize cost function
+train_step = tf.train.MomentumOptimizer(learning_rate,momentum=2.0).minimize(mean_square_error)
+
+sess = tf.Session()
+init = tf.initialize_all_variables()
+sess.run(init)
+tf.train.start_queue_runners(sess=sess)
+
+for m in range(no_of_epochs):          
+
+    i_train_data_tensor , o_train_data_tensor = train_data,train_classes
+    _,error,o = sess.run([train_step,mean_square_error,y], feed_dict={x: i_train_data_tensor, 
+        y_: o_train_data_tensor})
+
+    print'batch: ' , i , 'epoch: ', m+1 , 'error is:' , error#, 'output',o
